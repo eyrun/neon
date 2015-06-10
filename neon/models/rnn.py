@@ -337,14 +337,14 @@ class RNN(MLP):
         if numgrad['name'] == "output":
             num['target'] = self.class_layer.weights
             anl_target = self.class_layer.weight_updates
-            num['i'], num['j'] = 15, 56
+            num['i'], num['j'] = 15, numgrad['v']  # numgrad['x'] was 15
         elif numgrad['name'] == "input":
             num['target'] = self.rec_layer.weights
-            anl_target = self.rec_layer.weight_updates
+            anl_target = self.rec_layer.weight_updates  # renamed back
             num['i'], num['j'] = numgrad['x'], numgrad['y']  # 110 is "n"
         elif numgrad['name'] == "rec":
             num['target'] = self.rec_layer.weights_rec
-            anl_target = self.rec_layer.updates_rec
+            anl_target = self.rec_layer.Wh_updates
             num['i'], num['j'] = numgrad['x'], numgrad['z']
 
         elif numgrad['name'] == "lstm_x":
@@ -354,19 +354,19 @@ class RNN(MLP):
         elif numgrad['name'] == "lstm_ih":
             num['target'] = self.rec_layer.Wih
             anl_target = self.rec_layer.Wih_updates
-            num['i'], num['j'] = numgrad['x'], 55
+            num['i'], num['j'] = numgrad['x'], numgrad['w']
         elif numgrad['name'] == "lstm_fh":
             num['target'] = self.rec_layer.Wfh
             anl_target = self.rec_layer.Wfh_updates
-            num['i'], num['j'] = numgrad['x'], 55
+            num['i'], num['j'] = numgrad['x'], numgrad['w']
         elif numgrad['name'] == "lstm_oh":
             num['target'] = self.rec_layer.Woh
             anl_target = self.rec_layer.Woh_updates
-            num['i'], num['j'] = numgrad['x'], 55
+            num['i'], num['j'] = numgrad['x'], numgrad['w']
         elif numgrad['name'] == "lstm_ch":
             num['target'] = self.rec_layer.Wch
             anl_target = self.rec_layer.Wch_updates
-            num['i'], num['j'] = numgrad['x'], 55
+            num['i'], num['j'] = numgrad['x'], numgrad['w']
         else:
             logger.error("No such numgrad target: '%s'", numgrad['name'])
             raise AttributeError
@@ -434,9 +434,8 @@ class RNN(MLP):
                 self.backend.argmax(probs, axis=0, out=predlabels)
 
                 # collect batches to re-assemble continuous data
-                idx = self.unrolls * (mb_id - 1) + tau
-                outputs_pred[idx, :] = predlabels
-                outputs_targ[idx, :] = labels
+                outputs_pred[tau, :] = predlabels
+                outputs_targ[tau, :] = labels
 
             yield (outputs_pred.reshape((1, self.unrolls * self.batch_size)),
                    outputs_targ.reshape((1, self.unrolls * self.batch_size)))
